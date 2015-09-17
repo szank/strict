@@ -1,6 +1,7 @@
 package strict
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,7 +22,7 @@ var _ = Describe("Negotiator", func() {
 		var err error
 		r, err = http.NewRequest("POST", "http://example.com/", nil)
 		Expect(err).
-			NotTo(HaveOccured())
+			NotTo(HaveOccurred())
 		n = &negotiator{r}
 	})
 	It("should parse the Accept header correctly", func() {
@@ -49,7 +50,7 @@ var _ = Describe("ContentType", func() {
 		var err error
 		r, err = http.NewRequest("POST", "http://example.com/", nil)
 		Expect(err).
-			NotTo(HaveOccured())
+			NotTo(HaveOccurred())
 		w = httptest.NewRecorder()
 	})
 	It("should accept requests with a matching content type", func() {
@@ -97,7 +98,7 @@ var _ = Describe("ContentType", func() {
 		for _, m := range []string{"POST", "PATCH", "PUT"} {
 			r, err = http.NewRequest(m, "http://example.com/", nil)
 			Expect(err).
-				NotTo(HaveOccured())
+				NotTo(HaveOccurred())
 			r.Header.Set("Content-Type", "text/plain")
 			ContentType("application/json", "text/xml", "")(w, r)
 			Expect(w.Code).
@@ -109,11 +110,56 @@ var _ = Describe("ContentType", func() {
 		for _, m := range []string{"GET", "HEAD", "OPTIONS", "DELETE"} {
 			r, err = http.NewRequest(m, "http://example.com/", nil)
 			Expect(err).
-				NotTo(HaveOccured())
+				NotTo(HaveOccurred())
 			r.Header.Set("Content-Type", "text/plain")
 			ContentType("application/json", "text/xml", "")(w, r)
 			Expect(w.Code).
 				NotTo(Equal(http.StatusUnsupportedMediaType))
+		}
+	})
+})
+
+var _ = Describe("ContentLength", func() {
+	var w *httptest.ResponseRecorder
+	var r *http.Request
+	BeforeEach(func() {
+		var err error
+		r, err = http.NewRequest("POST", "http://example.com/", bytes.NewBufferString("TEST"))
+		Expect(err).
+			NotTo(HaveOccurred())
+		w = httptest.NewRecorder()
+	})
+	It("should accept with Content-Length header set", func() {
+		r.Header.Set("Content-Length", "4")
+		ContentLength()(w, r)
+		Expect(w.Code).
+			ToNot(Equal(http.StatusLengthRequired))
+	})
+	It("should block requests with no Content-Lenght set", func() {
+		ContentLength()(w, r)
+		Expect(w.Code).
+			To(Equal(http.StatusLengthRequired))
+	})
+	It("should act on block POST, PATCH and PUT requests", func() {
+		var err error
+		for _, m := range []string{"POST", "PATCH", "PUT"} {
+			r, err = http.NewRequest(m, "http://example.com/", bytes.NewBufferString("TEST"))
+			Expect(err).
+				NotTo(HaveOccurred())
+			ContentLength()(w, r)
+			Expect(w.Code).
+				To(Equal(http.StatusLengthRequired))
+		}
+	})
+	It("should not block GET, HEAD, OPTIONS and DELETE requests", func() {
+		var err error
+		for _, m := range []string{"GET", "HEAD", "OPTIONS", "DELETE"} {
+			r, err = http.NewRequest(m, "http://example.com/", bytes.NewBufferString("TEST"))
+			Expect(err).
+				NotTo(HaveOccurred())
+			ContentLength()(w, r)
+			Expect(w.Code).
+				NotTo(Equal(http.StatusLengthRequired))
 		}
 	})
 })
@@ -125,7 +171,7 @@ var _ = Describe("ContentCharset", func() {
 		var err error
 		r, err = http.NewRequest("POST", "http://example.com/", nil)
 		Expect(err).
-			NotTo(HaveOccured())
+			NotTo(HaveOccurred())
 		w = httptest.NewRecorder()
 	})
 	It("should accept requests with a matching charset", func() {
@@ -181,7 +227,7 @@ var _ = Describe("ContentCharset", func() {
 		for _, m := range []string{"POST", "PATCH", "PUT"} {
 			r, err = http.NewRequest(m, "http://example.com/", nil)
 			Expect(err).
-				NotTo(HaveOccured())
+				NotTo(HaveOccurred())
 			r.Header.Set("Content-Type", "text/plain")
 			ContentType("application/json", "text/xml", "")(w, r)
 			Expect(w.Code).
@@ -193,7 +239,7 @@ var _ = Describe("ContentCharset", func() {
 		for _, m := range []string{"GET", "HEAD", "OPTIONS", "DELETE"} {
 			r, err = http.NewRequest(m, "http://example.com/", nil)
 			Expect(err).
-				NotTo(HaveOccured())
+				NotTo(HaveOccurred())
 			r.Header.Set("Content-Type", "text/plain")
 			ContentType("application/json", "text/xml", "")(w, r)
 			Expect(w.Code).
@@ -209,7 +255,7 @@ var _ = Describe("Accept", func() {
 		var err error
 		r, err = http.NewRequest("POST", "http://example.com/", nil)
 		Expect(err).
-			NotTo(HaveOccured())
+			NotTo(HaveOccurred())
 		w = httptest.NewRecorder()
 	})
 	It("should accept requests with a matching content type", func() {
